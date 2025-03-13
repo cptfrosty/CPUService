@@ -10,21 +10,31 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Configuration;
 
 namespace serverCPUService
 {
-    public partial class Form1 : Form
+    public partial class ServerForm : Form
     {
-        public Form1()
-        {
-            InitializeComponent();
-            Task.Run(async () => { await Main(); });
-        }
-
         private static int clientPort = 8005;  //  Порт для прослушивания клиентов
         private static string serviceAddress = "localhost";
         private static int servicePort = 8004;
-        private static string lastCpuUsage = "0.00"; // Cache
+        //private static string lastCpuUsage = "0.00"; // Cache
+
+        private static AppLauncher _appLauncher = null;
+
+        public ServerForm()
+        {
+            InitializeComponent();
+            this.Shown += ServerForm_Shown;
+        }
+
+        private async void ServerForm_Shown(object sender, EventArgs e)
+        {
+            LogConsole.Init();
+            VisualCheckService();
+            await Main();
+        }
 
         static async Task Main()
         {
@@ -81,7 +91,7 @@ namespace serverCPUService
                                 string cpuUsage = await serviceReader.ReadLineAsync();
                                 if (cpuUsage != null)
                                 {
-                                    lastCpuUsage = cpuUsage; // Update the cache
+                                    CpuCounter.Add(cpuUsage);
                                 }
                                 else
                                 {
@@ -147,15 +157,79 @@ namespace serverCPUService
 
         private static string ProcessCommand(string command)
         {
-            switch (command.ToLower())
+            string[] commands = command.Split(';');
+
+            switch (commands[0].ToLower())
             {
                 case "getcpu":
-                    return lastCpuUsage; // Use the cached value
-                case "hello":
-                    return "Hello from the server!";
+                    return CpuCounter.GetAvarage().ToString("0.00");
+                case "app":
+                    if(_appLauncher != null)
+                    {
+                        _appLauncher.StopMonitoring();
+                    }
+
+                    //----------------------------------------
+                    //Струтура: (0) - команда
+                    //          (1) - путь до файла
+                    //          (2) - сколько должно работать
+                    //          (3) - процент загружености
+                    //----------------------------------------
+
+                    _appLauncher = new AppLauncher(int.Parse(commands[2]), int.Parse(commands[3]));
+                    string result = _appLauncher.SetProgramPath(commands[1]);
+                    if (result == "Успешно") 
+                         Task.Run(()=>_appLauncher.StartMonitoringAsync());
+
+                    return result;
                 default:
                     return "Неизвестная команда";
             }
+        }
+
+        /// <summary>
+        /// Проверить статус службы
+        /// </summary>
+        private void VisualCheckService()
+        {
+            var status = ServiceManager.GetServiceStatus(ConfigurationManager.AppSettings["NameService"]);
+
+            switch (status)
+            {
+                case null:
+                    btnOnService.Enabled = false;
+                    btnOffService.Enabled = false;
+                    btnReloadService.Enabled = false;
+
+                    labelInfo.Text = "Служба не найдена";
+                    break;
+                case System.ServiceProcess.ServiceControllerStatus.Stopped:
+                case System.ServiceProcess.ServiceControllerStatus.StopPending:
+                    btnOnService.Enabled = true;
+                    btnOffService.Enabled = false;
+                    btnReloadService.Enabled = false;
+                    break;
+                case System.ServiceProcess.ServiceControllerStatus.Running:
+                case System.ServiceProcess.ServiceControllerStatus.StartPending:
+                    btnOnService.Enabled = false;
+                    btnOffService.Enabled = true;
+                    btnReloadService.Enabled = true;
+                    break;
+            }
+        }
+
+        //TODO: пусть методы работают асинхронно и после выполнения, будет срабатывать VisualCheckService
+        // Так же VisualCheckService должен предварительно отключать некоторые кнопки, пока выполняется действие асихнронно
+        private async void btnOnService_Click(object sender, EventArgs e)
+        {
+            await ServiceManager.StartService(ConfigurationManager.AppSettings["NameService"]);
+            VisualCheckService();
+        }
+
+        private void btnOffService_Click(object sender, EventArgs e)
+        {
+            ServiceManager.StopService(ConfigurationManager.AppSettings["NameService"]);
+            VisualCheckService();
         }
     }
 }
