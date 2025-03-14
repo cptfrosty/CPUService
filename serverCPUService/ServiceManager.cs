@@ -11,25 +11,30 @@ namespace serverCPUService
 {
     internal class ServiceManager
     {
-        public static bool StopService(string serviceName, int timeoutMilliseconds = 50000)
+        public static ServiceController Service;
+
+        public async static Task<bool> StopService(string serviceName, int timeoutMilliseconds = 50000)
         {
-            ServiceController service = new ServiceController(serviceName);
-
-            if (service.Status != ServiceControllerStatus.Stopped && service.Status != ServiceControllerStatus.StopPending)
+            return await Task.Run(() =>
             {
-                LogConsole.WriteLine($"Остановка службы '{serviceName}'...");
+                ServiceController service = new ServiceController(serviceName);
 
-                service.Stop();
+                if (service.Status != ServiceControllerStatus.Stopped && service.Status != ServiceControllerStatus.StopPending)
+                {
+                    LogConsole.WriteLine($"Остановка службы '{serviceName}'...");
 
-                service.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromMilliseconds(timeoutMilliseconds));
-                LogConsole.WriteLine($"Служба '{serviceName}' успешно остановлена.");
-                return true;
-            }
-            else
-            {
-                LogConsole.WriteLine($"Служба '{serviceName}' уже остановлена или находится в процессе остановки.");
-                return true;
-            }
+                    service.Stop();
+
+                    service.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromMilliseconds(timeoutMilliseconds));
+                    LogConsole.WriteLine($"Служба '{serviceName}' успешно остановлена.");
+                    return true;
+                }
+                else
+                {
+                    LogConsole.WriteLine($"Служба '{serviceName}' уже остановлена или находится в процессе остановки.");
+                    return true;
+                }
+            });
         }
 
         public async static Task<bool> StartService(string serviceName, int timeoutMilliseconds = 50000)
@@ -56,9 +61,9 @@ namespace serverCPUService
             });
         }
 
-        public static async Task<bool> RestartService(string serviceName, int timeoutMilliseconds = 50000)
+        public async static  Task<bool> RestartService(string serviceName, int timeoutMilliseconds = 50000)
         {
-            if (StopService(serviceName, timeoutMilliseconds))
+            if (await StopService(serviceName, timeoutMilliseconds))
             {
                 return await StartService(serviceName, timeoutMilliseconds);
             }
@@ -69,19 +74,22 @@ namespace serverCPUService
             }
         }
 
-        public static ServiceControllerStatus? GetServiceStatus(string serviceName)
+        public async static Task<ServiceControllerStatus?> GetServiceStatus(string serviceName)
         {
-            try
+            return await Task.Run(() =>
             {
-                ServiceController service = new ServiceController(serviceName);
-                return service.Status;
-            }
-            catch (InvalidOperationException ex)
-            {
-                LogConsole.WriteLine($"Служба '{serviceName}' не существует/установлена " +
-                    $"или доступ к ней запрещён: {ex.Message}");
-                return null;
-            }
+                try
+                {
+                    ServiceController service = new ServiceController(serviceName);
+                    return (ServiceControllerStatus?)service.Status;
+                }
+                catch (InvalidOperationException ex)
+                {
+                    LogConsole.WriteLine($"Служба '{serviceName}' не существует/установлена " +
+                        $"или доступ к ней запрещён: {ex.Message}");
+                    return null;
+                }
+            });
         }
     }
 }

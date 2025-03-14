@@ -28,11 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            // 
-            // Service1
-            // 
-            this.ServiceName = "Service1";
-
+            this.ServiceName = "Monitors CPU";
         }
 
         #endregion

@@ -25,6 +25,10 @@ namespace CPUService
             processInstaller.Account = ServiceAccount.LocalSystem;
             serviceInstaller.StartType = ServiceStartMode.Manual;
             serviceInstaller.ServiceName = "Monitors CPU";
+            serviceInstaller.DisplayName = "CPU Monitoring Service";
+
+            serviceInstaller.Description = "Мониторинг нагрузки ЦП";
+
             Installers.Add(processInstaller);
             Installers.Add(serviceInstaller);
         }

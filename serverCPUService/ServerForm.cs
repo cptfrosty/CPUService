@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Configuration;
+using System.ServiceProcess;
 
 namespace serverCPUService
 {
@@ -22,6 +23,7 @@ namespace serverCPUService
         //private static string lastCpuUsage = "0.00"; // Cache
 
         private static AppLauncher _appLauncher = null;
+        private static ServiceMonitor _serviceMonitor;
 
         public ServerForm()
         {
@@ -32,13 +34,21 @@ namespace serverCPUService
         private async void ServerForm_Shown(object sender, EventArgs e)
         {
             LogConsole.Init();
-            VisualCheckService();
+            //VisualCheckService();
+
+            _serviceMonitor = new ServiceMonitor(ConfigurationManager.AppSettings["NameService"], 1000);
+            Task task = Task.Run(() => _serviceMonitor.StartMonitoringAsync());
+            _serviceMonitor.ServiceStatusChanged += _serviceMonitor_ServiceStatusChanged;
+
+            UpdateUI( await ServiceManager.GetServiceStatus(ConfigurationManager.AppSettings["NameService"]));
+
             await Main();
         }
 
         static async Task Main()
         {
             TcpListener clientListener = null;
+            
 
             try
             {
@@ -187,49 +197,74 @@ namespace serverCPUService
             }
         }
 
-        /// <summary>
-        /// Проверить статус службы
-        /// </summary>
-        private void VisualCheckService()
+
+        private void _serviceMonitor_ServiceStatusChanged(object sender, ServiceMonitor.ServiceStatusChangedEventArgs e)
         {
-            var status = ServiceManager.GetServiceStatus(ConfigurationManager.AppSettings["NameService"]);
+            UpdateUI(e.NewStatus);
+        }
 
-            switch (status)
+        /// <summary>
+        /// Обновляет пользовательский интерфейс
+        /// </summary>
+        /// <param name="status">Статус: null - отключить все кнопки</param>
+        private void UpdateUI(ServiceControllerStatus? status)
+        {
+            // Проверяем, требуется ли переключение потока (Invoke)
+            if (this.InvokeRequired)
             {
-                case null:
-                    btnOnService.Enabled = false;
-                    btnOffService.Enabled = false;
-                    btnReloadService.Enabled = false;
+                // Переключаемся в главный поток и выполняем обновление UI
+                this.Invoke(new Action(() => UpdateUI(status)));
+                return; // Прекратить выполнение текущего вызова, чтобы избежать повторного обновления
+            }
 
-                    labelInfo.Text = "Служба не найдена";
-                    break;
-                case System.ServiceProcess.ServiceControllerStatus.Stopped:
-                case System.ServiceProcess.ServiceControllerStatus.StopPending:
-                    btnOnService.Enabled = true;
-                    btnOffService.Enabled = false;
-                    btnReloadService.Enabled = false;
-                    break;
-                case System.ServiceProcess.ServiceControllerStatus.Running:
-                case System.ServiceProcess.ServiceControllerStatus.StartPending:
-                    btnOnService.Enabled = false;
-                    btnOffService.Enabled = true;
-                    btnReloadService.Enabled = true;
-                    break;
+            // Обновление UI в главном потоке
+            if (status == null)
+            {
+                btnOnService.Enabled = false;
+                btnOffService.Enabled = false;
+                btnReloadService.Enabled = false;
+            }
+            else
+            {
+                switch (status)
+                {
+                    case ServiceControllerStatus.Stopped:
+                    case ServiceControllerStatus.StopPending:
+                        btnOnService.Enabled = true;
+                        btnOffService.Enabled = false;
+                        btnReloadService.Enabled = false;
+                        labelInfo.Text = "Служба остановлена"; // Optional: Set descriptive text.
+                        break;
+                    case ServiceControllerStatus.Running:
+                    case ServiceControllerStatus.StartPending:
+                        btnOnService.Enabled = false;
+                        btnOffService.Enabled = true;
+                        btnReloadService.Enabled = true;
+                        labelInfo.Text = "Служба запущена"; // Optional: Set descriptive text.
+                        break;
+                    default:
+                        btnOnService.Enabled = false;
+                        btnOffService.Enabled = false;
+                        btnReloadService.Enabled = false;
+                        labelInfo.Text = "Неизвестный статус службы";
+                        break;
+                }
             }
         }
 
-        //TODO: пусть методы работают асинхронно и после выполнения, будет срабатывать VisualCheckService
-        // Так же VisualCheckService должен предварительно отключать некоторые кнопки, пока выполняется действие асихнронно
         private async void btnOnService_Click(object sender, EventArgs e)
         {
             await ServiceManager.StartService(ConfigurationManager.AppSettings["NameService"]);
-            VisualCheckService();
+            UpdateUI(null);
+
+            //VisualCheckService();
         }
 
-        private void btnOffService_Click(object sender, EventArgs e)
+        private async void btnOffService_Click(object sender, EventArgs e)
         {
-            ServiceManager.StopService(ConfigurationManager.AppSettings["NameService"]);
-            VisualCheckService();
+            await ServiceManager.StopService(ConfigurationManager.AppSettings["NameService"]);
+            UpdateUI(null);
+            //VisualCheckService();
         }
     }
 }
