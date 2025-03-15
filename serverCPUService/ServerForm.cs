@@ -18,9 +18,9 @@ namespace serverCPUService
     public partial class ServerForm : Form
     {
         private static int clientPort = 8005;  //  Порт для прослушивания клиентов
+        private static int servicePort = 8004; // Порт для прослушивания сервиса
+        
         private static string serviceAddress = "localhost";
-        private static int servicePort = 8004;
-        //private static string lastCpuUsage = "0.00"; // Cache
 
         private static AppLauncher _appLauncher = null;
         private static ServiceMonitor _serviceMonitor;
@@ -34,7 +34,6 @@ namespace serverCPUService
         private async void ServerForm_Shown(object sender, EventArgs e)
         {
             LogConsole.Init();
-            //VisualCheckService();
 
             _serviceMonitor = new ServiceMonitor(ConfigurationManager.AppSettings["NameService"], 1000);
             Task task = Task.Run(() => _serviceMonitor.StartMonitoringAsync());
@@ -49,10 +48,8 @@ namespace serverCPUService
         {
             TcpListener clientListener = null;
             
-
             try
             {
-                // Connect to the service (runs in a separate thread)
                 Task task = Task.Run(() => ConnectToService());
 
                 clientListener = new TcpListener(IPAddress.Any, clientPort);
@@ -180,10 +177,10 @@ namespace serverCPUService
                     }
 
                     //----------------------------------------
-                    //Струтура: (0) - команда
-                    //          (1) - путь до файла
-                    //          (2) - сколько должно работать
-                    //          (3) - процент загружености
+                    //Структура: (0) - команда
+                    //           (1) - путь до файла
+                    //           (2) - сколько должно работать
+                    //           (3) - процент загружености
                     //----------------------------------------
 
                     _appLauncher = new AppLauncher(int.Parse(commands[2]), int.Parse(commands[3]));
@@ -214,7 +211,7 @@ namespace serverCPUService
             {
                 // Переключаемся в главный поток и выполняем обновление UI
                 this.Invoke(new Action(() => UpdateUI(status)));
-                return; // Прекратить выполнение текущего вызова, чтобы избежать повторного обновления
+                return;
             }
 
             // Обновление UI в главном потоке
@@ -222,7 +219,6 @@ namespace serverCPUService
             {
                 btnOnService.Enabled = false;
                 btnOffService.Enabled = false;
-                btnReloadService.Enabled = false;
             }
             else
             {
@@ -232,20 +228,17 @@ namespace serverCPUService
                     case ServiceControllerStatus.StopPending:
                         btnOnService.Enabled = true;
                         btnOffService.Enabled = false;
-                        btnReloadService.Enabled = false;
                         labelInfo.Text = "Служба остановлена"; // Optional: Set descriptive text.
                         break;
                     case ServiceControllerStatus.Running:
                     case ServiceControllerStatus.StartPending:
                         btnOnService.Enabled = false;
                         btnOffService.Enabled = true;
-                        btnReloadService.Enabled = true;
-                        labelInfo.Text = "Служба запущена"; // Optional: Set descriptive text.
+                        labelInfo.Text = "Служба запущена";
                         break;
                     default:
                         btnOnService.Enabled = false;
                         btnOffService.Enabled = false;
-                        btnReloadService.Enabled = false;
                         labelInfo.Text = "Неизвестный статус службы";
                         break;
                 }
@@ -254,17 +247,14 @@ namespace serverCPUService
 
         private async void btnOnService_Click(object sender, EventArgs e)
         {
-            await ServiceManager.StartService(ConfigurationManager.AppSettings["NameService"]);
             UpdateUI(null);
-
-            //VisualCheckService();
+            await ServiceManager.StartService(ConfigurationManager.AppSettings["NameService"]);
         }
 
         private async void btnOffService_Click(object sender, EventArgs e)
         {
-            await ServiceManager.StopService(ConfigurationManager.AppSettings["NameService"]);
             UpdateUI(null);
-            //VisualCheckService();
+            await ServiceManager.StopService(ConfigurationManager.AppSettings["NameService"]);
         }
     }
 }

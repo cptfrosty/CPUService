@@ -30,7 +30,6 @@
         {
             this.btnOnService = new System.Windows.Forms.Button();
             this.btnOffService = new System.Windows.Forms.Button();
-            this.btnReloadService = new System.Windows.Forms.Button();
             this.labelInfo = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
@@ -54,15 +53,6 @@
             this.btnOffService.UseVisualStyleBackColor = true;
             this.btnOffService.Click += new System.EventHandler(this.btnOffService_Click);
             // 
-            // btnReloadService
-            // 
-            this.btnReloadService.Location = new System.Drawing.Point(12, 81);
-            this.btnReloadService.Name = "btnReloadService";
-            this.btnReloadService.Size = new System.Drawing.Size(315, 23);
-            this.btnReloadService.TabIndex = 2;
-            this.btnReloadService.Text = "Перезапустить";
-            this.btnReloadService.UseVisualStyleBackColor = true;
-            // 
             // labelInfo
             // 
             this.labelInfo.AutoSize = true;
@@ -77,7 +67,6 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(339, 133);
             this.Controls.Add(this.labelInfo);
-            this.Controls.Add(this.btnReloadService);
             this.Controls.Add(this.btnOffService);
             this.Controls.Add(this.btnOnService);
             this.Name = "ServerForm";
@@ -91,7 +80,6 @@
 
         private System.Windows.Forms.Button btnOnService;
         private System.Windows.Forms.Button btnOffService;
-        private System.Windows.Forms.Button btnReloadService;
         private System.Windows.Forms.Label labelInfo;
     }
 }

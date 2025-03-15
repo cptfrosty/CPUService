@@ -2,17 +2,20 @@
 using System.ServiceProcess;
 using System.Threading.Tasks;
 
-//-------------------------------------------------
-// Получение информации о конкретной службе
-//-------------------------------------------------
+//---------------------------------------------------------
+// ServiceManager - класс для управления службой
+//---------------------------------------------------------
 
-//TODO: сделать методы ассинхронными
 namespace serverCPUService
 {
     internal class ServiceManager
     {
-        public static ServiceController Service;
-
+        /// <summary>
+        /// Остановка службы
+        /// </summary>
+        /// <param name="serviceName">Название службы</param>
+        /// <param name="timeoutMilliseconds">Время ожидания</param>
+        /// <returns></returns>
         public async static Task<bool> StopService(string serviceName, int timeoutMilliseconds = 50000)
         {
             return await Task.Run(() =>
@@ -36,7 +39,12 @@ namespace serverCPUService
                 }
             });
         }
-
+        /// <summary>
+        /// Запустить службу
+        /// </summary>
+        /// <param name="serviceName">Название службы</param>
+        /// <param name="timeoutMilliseconds">Время ожидания службы</param>
+        /// <returns></returns>
         public async static Task<bool> StartService(string serviceName, int timeoutMilliseconds = 50000)
         {
             return await Task.Run(() =>
@@ -60,7 +68,12 @@ namespace serverCPUService
                 }
             });
         }
-
+        /// <summary>
+        /// Перезапустить службу
+        /// </summary>
+        /// <param name="serviceName">Название службы</param>
+        /// <param name="timeoutMilliseconds">Время ожидания службы</param>
+        /// <returns></returns>
         public async static  Task<bool> RestartService(string serviceName, int timeoutMilliseconds = 50000)
         {
             if (await StopService(serviceName, timeoutMilliseconds))
@@ -73,7 +86,11 @@ namespace serverCPUService
                 return false;
             }
         }
-
+        /// <summary>
+        /// Получить статус службы
+        /// </summary>
+        /// <param name="serviceName">Название службы</param>
+        /// <returns></returns>
         public async static Task<ServiceControllerStatus?> GetServiceStatus(string serviceName)
         {
             return await Task.Run(() =>
