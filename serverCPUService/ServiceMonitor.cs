@@ -1,9 +1,5 @@
-﻿using serverCPUService;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.ServiceProcess;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -68,7 +64,7 @@ namespace serverCPUService
 
                     if (currentStatus != previousStatus)
                     {
-                        Console.WriteLine($"Статус службы '{serviceName}' изменился с '{previousStatus}' на '{currentStatus}'");
+                        LogConsole.WriteLine($"Статус службы '{serviceName}' изменился с '{previousStatus}' на '{currentStatus}'");
 
                         // Raise the event
                         OnServiceStatusChanged(new ServiceStatusChangedEventArgs(previousStatus, currentStatus));
@@ -94,9 +90,8 @@ namespace serverCPUService
 
         public void StopMonitoring()
         {
-            // Cancel the polling task
             cancellationTokenSource.Cancel();
-            Console.WriteLine("StopMonitoring called.");
+            LogConsole.WriteLine("StopMonitoring called.");
         }
 
         protected virtual void OnServiceStatusChanged(ServiceStatusChangedEventArgs e)

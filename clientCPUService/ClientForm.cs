@@ -1,15 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using System.Windows.Forms;
 
 //------------------------------------------------------------------
@@ -20,7 +13,7 @@ using System.Windows.Forms;
 // но эти показатели можно настроить в:
 // 1) В самом сервисе
 // 2) На сервере
-// 3) На клиентском прилоежении
+// 3) На клиентском приложении
 //------------------------------------------------------------------
 
 
@@ -37,9 +30,6 @@ namespace clientCPUService
         
         private bool isConnected = false;
         private System.Threading.Timer timer; // Таймер для опроса
-
-        //private List<float> _averageCpuUsage { get; set; }
-        //private int _amountAverageValueCollection = 10; //Количество сбора среднего значения процессора
 
         public ClientForm()
         {
@@ -59,19 +49,19 @@ namespace clientCPUService
                 writer = new StreamWriter(stream) { AutoFlush = true };
 
                 isConnected = true;
-                UpdateButtonStates();
+
                 this.Invoke((MethodInvoker)delegate
                 {
                     VisualStatusConnectToServer(isConnected);
                 });
-                AppendToLog("Подключено к серверу.");
+                //Подключено к серверу
 
                 // Запускаем таймер для опроса
                 timer = new System.Threading.Timer(GetCpuUsage, null, TimeSpan.Zero, TimeSpan.FromSeconds(0.1f));
             }
             catch (SocketException ex)
             {
-                AppendToLog("Ошибка подключения: " + ex.Message);
+                //Ошибка подключения
                 this.Invoke((MethodInvoker)delegate
                 {
                     VisualStatusConnectToServer(isConnected);
@@ -104,7 +94,7 @@ namespace clientCPUService
                 {
                     // Обрабатываем разрыв соединения (безопасно для потока)
                     this.Invoke((MethodInvoker)delegate {
-                        AppendToLog("Соединение прервано.");
+                        //Соединение прервано
                         Disconnect();
                     });
                 }
@@ -113,7 +103,7 @@ namespace clientCPUService
             {
                 // Обрабатываем ошибку (безопасно для потока)
                 this.Invoke((MethodInvoker)delegate {
-                    AppendToLog("Ошибка при обмене данными: " + ex.Message);
+                    //Ошибка при обмене данными
                     Disconnect();
                 });
             }
@@ -121,7 +111,7 @@ namespace clientCPUService
             {
                 //Обрабатываем ошибку (безопасно для потока)
                 this.Invoke((MethodInvoker)delegate {
-                    AppendToLog("Произошла непредвиденная ошибка: " + ex.Message);
+                    //Произошла непредвиденная ошибка
                     Disconnect();
                 });
             }
@@ -163,7 +153,7 @@ namespace clientCPUService
             {
                 // Обрабатываем ошибку (безопасно для потока)
                 this.Invoke((MethodInvoker)delegate {
-                    AppendToLog("Ошибка при обмене данными: " + ex.Message);
+                    //Ошибка при обмене данными
                     Disconnect();
                 });
             }
@@ -171,7 +161,7 @@ namespace clientCPUService
             {
                 //Обрабатываем ошибку (безопасно для потока)
                 this.Invoke((MethodInvoker)delegate {
-                    AppendToLog("Произошла непредвиденная ошибка: " + ex.Message);
+                    //Произошла непредвиденная ошибка
                     Disconnect();
                 });
             }
@@ -193,28 +183,15 @@ namespace clientCPUService
                 }
                 catch (Exception ex)
                 {
-                    AppendToLog("Ошибка при отключении: " + ex.Message);
+                    //Ошибка при отключении
                 }
                 finally
                 {
                     isConnected = false;
-                    UpdateButtonStates();
                     VisualStatusConnectToServer(isConnected);
-                    AppendToLog("Отключено от сервера.");
+                    //Отключено от сервера.");
                 }
             }
-        }
-
-        private void AppendToLog(string message)
-        {
-            //logTextBox.AppendText(message + Environment.NewLine);
-        }
-
-        private void UpdateButtonStates()
-        {
-            //ConnectButton.Enabled = !isConnected;
-            //GetCpuButton.Enabled = isConnected; // Deprecated
-            //DisconnectButton.Enabled = isConnected;
         }
 
         /// <summary>
@@ -237,21 +214,6 @@ namespace clientCPUService
         private void UpdateVisualInfoCpu(string response)
         {
             labelCPUInfo.Text = $"{response}%";
-
-            //float cpuUsage;
-            //bool isParseCpuUsage = float.TryParse(response, out cpuUsage);
-
-            //if (cpuUsage > 0.0f)
-            //{
-            //    _averageCpuUsage.Add(cpuUsage);
-            //}
-
-            //if (_averageCpuUsage.Count > _amountAverageValueCollection)
-            //{
-            //    float average = _averageCpuUsage.Average();
-            //    labelCPUInfo.Text = $"{average.ToString("0.00")}%";
-            //    _averageCpuUsage.RemoveAt(0);
-            //}
         }
 
         private void btnSave_Click(object sender, EventArgs e)

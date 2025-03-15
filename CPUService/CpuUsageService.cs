@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.ServiceProcess;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -56,51 +52,40 @@ namespace CPUService
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при запуске службы: {ex.Message}");
-                // Handle the error (e.g., stop the service, log the error)
-                Stop(); // Stop the service if it fails to start
+                Stop();
             }
         }
 
         protected override void OnStop()
         {
-            Console.WriteLine("OnStop: Starting to stop service...");
             // Останавливаем потоки
             if (cancellationTokenSource != null)
             {
-                Console.WriteLine("OnStop: Requesting cancellation...");
-                cancellationTokenSource.Cancel(); // Request cancellation
+                cancellationTokenSource.Cancel();
 
-                // Optional: Wait for the threads to stop (with a timeout)
                 if (updateThread != null && updateThread.IsAlive)
                 {
-                    Console.WriteLine("OnStop: Waiting for updateThread to finish...");
-                    updateThread.Join(5000); // Wait 5 seconds
+                    updateThread.Join(5000);
                 }
                 if (listenerThread != null && listenerThread.IsAlive)
                 {
-                    Console.WriteLine("OnStop: Waiting for listenerThread to finish...");
-                    listenerThread.Join(5000); // Wait 5 seconds
+                    listenerThread.Join(5000);
                 }
-                // Dispose of the CancellationTokenSource to release resources
+                // Освобождение ресурсов
                 cancellationTokenSource.Dispose();
-                cancellationTokenSource = null; // Set to null to prevent accidental reuse
-                Console.WriteLine("OnStop: CancellationTokenSource disposed.");
+                cancellationTokenSource = null; // null для предотвращения случайного повторного использования
             }
 
-            // Release resources
+            // Освобождение ресурсов
             if (cpuCounter != null)
             {
-                Console.WriteLine("OnStop: Disposing PerformanceCounter...");
                 cpuCounter.Dispose();
-                cpuCounter = null; // Set to null to prevent accidental reuse
-                Console.WriteLine("OnStop: PerformanceCounter disposed.");
+                cpuCounter = null; // null для предотвращения случайного повторного использования
             }
-            Console.WriteLine("OnStop: Service stopped.");
         }
 
         private void UpdateCpuUsage(CancellationToken cancellationToken)
         {
-            Console.WriteLine("UpdateCpuUsage: Thread started.");
             try
             {
                 while (!cancellationToken.IsCancellationRequested)
@@ -113,84 +98,67 @@ namespace CPUService
                     }
                     catch (ThreadAbortException)
                     {
-                        // Handle ThreadAbortException (if you *really* need to, but usually not)
-                        Console.WriteLine("UpdateCpuUsage: ThreadAbortException caught.");
-                        Thread.ResetAbort(); // Clears the thread abort
+                        Thread.ResetAbort(); // Отменяет прерывание потока
                         break;
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"UpdateCpuUsage: Ошибка: {ex.Message}");
                         //  Если ошибка критическая, то можно завершить поток (return;)
                     }
                 }
             }
             catch (ThreadInterruptedException)
             {
-                Console.WriteLine("UpdateCpuUsage: ThreadInterruptedException caught.");
             }
             finally
             {
-                Console.WriteLine("UpdateCpuUsage: Thread finished.");
             }
         }
 
         private async Task StartListeningAsync(CancellationToken cancellationToken)
         {
-            Console.WriteLine("StartListening: Thread started.");
             TcpListener listener = null;
             try
             {
                 listener = new TcpListener(IPAddress.Any, port);
                 listener.Start();
-                Console.WriteLine($"StartListening: Listening on port {port}...");
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
-                        // Use PendingAsync to avoid blocking
+                        // Используется AcceptTcpClientAsync, чтобы избежать блокировки
                         Task<TcpClient> acceptTask = listener.AcceptTcpClientAsync();
                         await Task.WhenAny(acceptTask, Task.Delay(50, cancellationToken));
 
                         if (acceptTask.IsCompleted)
                         {
                             TcpClient client = await acceptTask;
-                            Console.WriteLine("StartListening: Accepted connection.");
 
-                            // Start client handling in separate thread
                             ThreadPool.QueueUserWorkItem(HandleClientThread, new Tuple<TcpClient, CancellationToken>(client, cancellationToken));
                         }
                         else if (cancellationToken.IsCancellationRequested)
                         {
-                            Console.WriteLine("StartListening: Cancellation requested, exiting.");
                             break;
                         }
                     }
                     catch (SocketException ex)
                     {
-                        Console.WriteLine($"StartListening: SocketException: {ex.Message}");
-                        // Consider restarting the listener or logging the error and exiting
                         break;
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"StartListening: Error: {ex.Message}");
                         break;
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"StartListening: Fatal error: {ex.Message}");
             }
             finally
             {
-                Console.WriteLine("StartListening: Thread is stopping, closing listener...");
                 listener?.Stop();
-                Console.WriteLine("StartListening: Listener stopped.");
             }
-            Console.WriteLine("StartListening: Thread finished.");
         }
 
 
@@ -210,33 +178,20 @@ namespace CPUService
                     {
                         try
                         {
-                            // Check if the client sent any data
-                            if (stream.DataAvailable)
-                            {
-                                string request = await ReadLineAsync(reader, cancellationToken); // read the data from client
-                                if (request != null)
-                                {
-                                    Console.WriteLine($"HandleClient: Received request: {request}");
-                                    //You can add logic based on this request here for extra commands
-                                }
-                            }
-                            string cpuUsage = GetCpuUsageSafe(); // Get the CPU usage
+                            string cpuUsage = GetCpuUsageSafe(); // Получить CPU
                             await writer.WriteLineAsync(cpuUsage); // Отправляем *текущее* значение
                             await Task.Delay(100, cancellationToken); // Отправляем данные каждые 0.1 сек.
                         }
                         catch (OperationCanceledException)
                         {
-                            Console.WriteLine("HandleClient: Task was cancelled.");
                             break;
                         }
                         catch (IOException ex)
                         {
-                            Console.WriteLine($"HandleClient: IOException: {ex.Message}");
                             break;
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"HandleClient: Error: {ex.Message}");
                             break;
                         }
                     }
@@ -244,12 +199,10 @@ namespace CPUService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"HandleClient: Outer Error: {ex.Message}");
             }
             finally
             {
                 client.Close();
-                Console.WriteLine("HandleClient: Connection closed.");
             }
         }
 
@@ -262,7 +215,6 @@ namespace CPUService
 
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    Console.WriteLine("ReadLineAsync: Cancellation requested.");
                     return null;
                 }
                 else if (readLineTask.IsCompleted)
@@ -271,13 +223,11 @@ namespace CPUService
                 }
                 else
                 {
-                    Console.WriteLine("ReadLineAsync: Timeout occurred.");
-                    return null; // or throw an exception if you want to indicate a timeout
+                    return null;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"ReadLineAsync: Exception: {ex.Message}");
                 return null;
             }
         }
@@ -289,8 +239,7 @@ namespace CPUService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"GetCpuUsageSafe: Error getting CPU usage: {ex.Message}");
-                return "0.00"; // Return a default value
+                return "0.00";
             }
         }
 
@@ -302,21 +251,18 @@ namespace CPUService
             }
             catch (InvalidOperationException ex)
             {
-                Console.WriteLine($"GetCpuUsage: InvalidOperationException: {ex.Message}");
                 // Возможно, счетчик не был инициализирован или не существует
                 // Попробуйте пересоздать счетчик или вернуть значение по умолчанию
                 return 0;
             }
             catch (Win32Exception ex)
             {
-                Console.WriteLine($"GetCpuUsage: Win32Exception: {ex.Message}");
                 // Возможно, проблема с правами доступа
                 return 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"GetCpuUsage: Exception: {ex.Message}");
-                return 0; // or throw the exception, depending on the desired behavior
+                return 0;
             }
         }
     }

@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Net.Sockets;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Configuration;
@@ -60,18 +54,18 @@ namespace serverCPUService
                 while (true)
                 {
                     TcpClient client = await clientListener.AcceptTcpClientAsync();
-                    Console.WriteLine("Принято подключение от клиента.");
+                    LogConsole.WriteLine("Принято подключение от клиента.");
 
                     await HandleClient(client);
                 }
             }
             catch (SocketException ex)
             {
-                Console.WriteLine($"Ошибка при запуске слушателя клиентов: {ex.Message}");
+                LogConsole.WriteLine($"Ошибка при запуске слушателя клиентов: {ex.Message}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка: {ex.Message}");
+                LogConsole.WriteLine($"Ошибка: {ex.Message}");
             }
             finally
             {
@@ -88,7 +82,7 @@ namespace serverCPUService
                     using (TcpClient serviceClient = new TcpClient())
                     {
                         await serviceClient.ConnectAsync(serviceAddress, servicePort);
-                        Console.WriteLine("Подключено к службе.");
+                        LogConsole.WriteLine("Подключено к службе.");
 
                         using (NetworkStream serviceStream = serviceClient.GetStream())
                         using (StreamReader serviceReader = new StreamReader(serviceStream))
@@ -111,14 +105,14 @@ namespace serverCPUService
                 }
                 catch (SocketException ex)
                 {
-                    Console.WriteLine($"Ошибка при подключении к службе: {ex.Message}");
+                    LogConsole.WriteLine($"Ошибка при подключении к службе: {ex.Message}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Ошибка: {ex.Message}");
+                    LogConsole.WriteLine($"Ошибка: {ex.Message}");
                 }
 
-                Console.WriteLine("Повторное подключение к службе через 5 секунд...");
+                LogConsole.WriteLine("Повторное подключение к службе через 5 секунд...");
                 await Task.Delay(5000);
             }
         }
@@ -140,7 +134,7 @@ namespace serverCPUService
                             break;
                         }
 
-                        Console.WriteLine($"Получена команда от клиента: {clientCommand}");
+                        LogConsole.WriteLine($"Получена команда от клиента: {clientCommand}");
 
                         string response = ProcessCommand(clientCommand); // Process the command
                         await clientWriter.WriteLineAsync(response);
@@ -149,16 +143,16 @@ namespace serverCPUService
             }
             catch (SocketException ex)
             {
-                Console.WriteLine($"Ошибка при обработке клиента: {ex.Message}");
+                LogConsole.WriteLine($"Ошибка при обработке клиента: {ex.Message}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка: {ex.Message}");
+                LogConsole.WriteLine($"Ошибка: {ex.Message}");
             }
             finally
             {
                 client.Close();
-                Console.WriteLine("Соединение с клиентом закрыто.");
+                LogConsole.WriteLine("Соединение с клиентом закрыто.");
             }
         }
 
